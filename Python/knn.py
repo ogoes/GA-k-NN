@@ -45,14 +45,15 @@ def get_assert(norms):
 
   return norms[moda]["class"]
 
-def get_norms (train_value, test_value, k = 1):
+def get_norms (train_value, test_value, enabled_features):
   norm = 0.0
   for (i, feature) in enumerate(test_value['features']):
-    norm += ((train_value["features"][i] - feature)**2)
+    if enabled_features[i] == 1:
+      norm += ((train_value["features"][i] - feature)**2)
 
   return sqrt(norm)
 
-def test (training_filename, test_filename, k):
+def test (training_filename, test_filename, enabled_features, k):
   _assert = 0
   training_values = get_values_from_file(training_filename)
   testing_values = get_values_from_file(test_filename)
@@ -62,7 +63,7 @@ def test (training_filename, test_filename, k):
     norms = []
     for train_value in training_values:
       norms.append({
-        "norm": get_norms(test_value, train_value),
+        "norm": get_norms(test_value, train_value, enabled_features),
         "class": train_value["class"]
       })
 
@@ -75,22 +76,3 @@ def test (training_filename, test_filename, k):
 
   return 100 * _assert / len(testing_values)
 
-
-if __name__ == "__main__":
-  parser = argparse.ArgumentParser()
-
-  parser.add_argument("-t", "--train", help = "Training filename", required = True, type = str)
-
-  parser.add_argument("-p", "--test", help = "Testing filename", required = True, type = str)
-
-  parser.add_argument("-k", "--distance", help = "Distance of k-NN", type = int)
-
-  args = parser.parse_args()
-
-  if args.distance != None:
-    print("\n --- Para distância %i: %.1f%%" %(args.distance, test(args.train, args.test, args.distance)))
-  else:
-    print(test(args.train, args.test, 1))
-
-
-  pass
