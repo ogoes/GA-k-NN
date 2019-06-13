@@ -150,32 +150,40 @@ Gene best_fit(Gene * population) {
 
 int main (int argc, char * argv[]) {
 
-  if (argc < 3) {
-    errno = EBADF;
-    perror("ERRO: Deve haver três argumentos [programa arquivo_de_treinamento arquivo_de_teste]");
-    return EXIT_FAILURE;
-  }
-
-  int c, k;
-  static struct option long_options[] ={
-    /* These options set a flag. */
-    {"verbose", no_argument,       &verbose_flag, 1},
-    {"best",   no_argument,       &best_fitness, 1},
-    /* These options don’t set a flag.
-        We distinguish them by their indices. */
-    {"train-file",  required_argument, 0, 'f'},
-    {"test-file",  required_argument, 0, 't'},
-    {"distance",  optional_argument, 0, 'k'},
-    {0, 0, 0, 0}
-  };
-
+  // if (argc < 3) {
+  //   errno = EBADF;
+  //   perror("ERRO: Deve haver três argumentos [programa arquivo_de_treinamento arquivo_de_teste]");
+  //   return EXIT_FAILURE;
+  // }
 
   struct flag flags;
 
   flags.distance = 1;
+  flags.mutation_p = 0.01;
   flags.test_filename = flags.train_filename = NULL;  
 
   parse(argc, argv, &flags);
+
+
+  printf("mutation %lf\nbest %i\nverbose %i\ndistance %i\n", flags.mutation_p, best_fitness, verbose_flag, flags.distance);
+  return 0;
+
+
+  if (helper == 1) {
+    printf("\"Escolha\" das melhores features aplicadas no k-NN -- Uso de algoritmos genéticos \n\
+para definir quais características devem ser usadas para se obter uma acurácia maior \n\n\
+\t [-h|--help]              Mostra esse manual\n\
+\t [-b|--best]              Use uma string de bits a partir de um arquivo, salve os melhores resultados no arquivo\n\
+\t [-v|--verbose]           Mostre os resultados das gerações\n\
+\t [-k|--distance] INT      Valor do K usado no k-NN\n\
+\t [-p|--porcent] INT       Porcentagem de mutação do algoritmo genético\n\
+\t -f|--train-file FILE     Arquivo com as instâncias de treinamento (obrigatório)\n\
+\t -t|--test-file FILE      Arquivo com as instâncias de teste (obrigatório)\n\
+Este trabalho foi desenvolvido por Otávio Goes e Thais Zorawski. \n\
+Para a matéria de Inteligência Artificial \n\
+do 5º período do Curso de Bachareado em Ciência da Computação, pela UTFPR campus Campo Mourão\n");
+    return 0;
+  }
 
   if (!flags.train_filename || !flags.test_filename) {
     errno = EBADF;
@@ -219,11 +227,11 @@ int main (int argc, char * argv[]) {
 
 
   int generation = 1;
-  while (generation <= 10) {
+  while (generation <= 100) {
     clock_t start = clock();
     selection(pop);
     crossing(pop);
-    mutation(pop, 0.01);
+    mutation(pop, flags.mutation_p);
     evaluate(pop, argv[2], distance);
     Gene bestGen = best_fit(pop);
     clock_t end = clock();
@@ -231,9 +239,7 @@ int main (int argc, char * argv[]) {
 
     if (verbose_flag)
       printf("\033[0;32m %.2lfs \033[0m ", time_spent);
-
-
-
+      
     if (bestGen.fitness > best) {
 
       if (best_fitness) {
