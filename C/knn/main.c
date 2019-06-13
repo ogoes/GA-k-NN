@@ -16,7 +16,10 @@ int main (int argc, char * argv[]) {
 
 
   if (training(argv[1]) < 0) return EXIT_FAILURE;
-  if (testing(argv[2], 1) < 0) return EXIT_FAILURE;
+
+  printf("accuracy: %lf%%\n", testing(argv[2], 1));
+  printf("accuracy: %lf%%\n", testing(argv[2], 1));
+
 
   return EXIT_SUCCESS;
 }

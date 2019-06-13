@@ -4,6 +4,8 @@ from pprint import pprint
 import knn
 import math
 import time
+from copy import deepcopy
+
 # f_x = lambda x: round(math.sin((math.pi * x)/256), 4)
 
 def bin_list_to_int (bin_list=[]): # 1 0 0
@@ -20,11 +22,10 @@ def begin_population (size=10, chroms_size=10):
   
   for i in range(size):
     chromossomos = [random.randint(0,1) for _ in range(chroms_size)]
-    value = bin_list_to_int(chromossomos)
+    # value = bin_list_to_int(chromossomos)
     gene = {
-      "value": value,
-      "chromossomos": chromossomos
-      #"fitness": f_x(value)
+      "chromossomos": chromossomos,
+      "fitness": 1.00000
     }
     population.append(gene)
     pass
@@ -64,11 +65,13 @@ def selection (popolation=[]):
 
 def cross (population=[]):
   population.sort(key= lambda x: x["fitness"], reverse= True)
-  cross_list = population[:int(len(population)/2)]
+  half = int(len(population)/2)
 
-  copy_list = population[:int(len(population)/2)]
+  cross_list = deepcopy(population[:half])
+  copy_list = deepcopy(population[:half])
 
-  for i in range(len(cross_list)):
+
+  for i in range(len(cross_list)-1):
     if i % 2 == 0:
       pair_a = cross_list[i]
       pair_b = cross_list[i+1]
@@ -84,7 +87,7 @@ def cross (population=[]):
     pass
 
   pass
-  return cross_list + copy_list
+  return copy_list + cross_list
 
 # Faz mutacao na populacao
 def mutation (population=[], mutation_p=0.01):
@@ -109,18 +112,20 @@ def mutation (population=[], mutation_p=0.01):
 
 # Calcula fitness exercicio sala
 def evaluate (population=[]):
+
   for gene in population:
     gene["fitness"] = f_x(bin_list_to_int(gene["chromossomos"]))
     pass
   pass
 
+
+
 # Calcula fitness knn
 def evaluateknn (train, test, k, population=[]):
-  for gene in population:
+  for (i, gene) in enumerate(population):
     gene["fitness"] = knn.test(train, test, gene["chromossomos"], k)
     pass
   pass
-
 # Acha a melhor fitness
 def bestFit (population=[]):
   list_c = population
@@ -162,18 +167,23 @@ if __name__ == "__main__":
   #   print("\n --- Para distância %i: %.1f%%" %(args.distance, knn.test(args.train, args.test, enabled_features, args.distance)))
   # else:
   #   print(knn.test(args.train, args.test, enabled_features, 1))
-  print("\n --- Para distância %i: %.1f%%" %(args.distance, knn.test(args.train, args.test, enabled_features, args.distance)))
+  bestFitness = knn.test(args.train, args.test, enabled_features, args.distance)
+  print("\n --- Para distância %i: %.1f%%" %(args.distance, bestFitness))
 
-  population = begin_population(4,len(y)) # (num_elementos, num_caracteristicas)
+  population = begin_population(12,len(y)) # (num_elementos, num_caracteristicas)
   t = 0
   while True:
     t += 1
-    population = selection(population)
+    # population = selection(population)
     population = cross(population)
     mutation(population)
     # evaluate(population)
     evaluateknn(args.train, args.test, args.distance, population)
-    print("geração %i" %t, "Melhor fitness %f" %(bestFit(population)))
+    bestFitGen = bestFit(population)
+    if bestFitGen > bestFitness:
+      print("Nova melhor fitness", bestFitGen)
+      bestFitness = bestFitGen 
+    print("geração ", t, " --> Melhor fitness", bestFitGen)
     time.sleep(1)
     pass
     

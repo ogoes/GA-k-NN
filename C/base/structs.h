@@ -27,9 +27,9 @@ int insert_element (Class *, Element *);
 Element * create_element(double *);
 double get_norm (const Element *);
 int compare (const void *, const void *);
-void sort_by_norm (Class *, Element **);
+void sort_by_norm (Element **);
 int get_assert (Element **, int);
-double calculate_norm (Element *, Element *, function_t *);
+double calculate_norm (Element *, Element *, int *);
 
 
 #endif
