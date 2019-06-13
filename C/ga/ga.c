@@ -21,12 +21,6 @@ typedef struct {
   int distance;
 } Params;
 
-void print_features(int * features) {
-  for (int i = 0; i < FEATURE_NUMBER; ++i) {
-    printf("%i ", features[i]);
-  }
-  printf("\n");
-}
 
 Gene * begin_population() {
   Gene * population = (Gene *) calloc (POPULATION_SIZE, sizeof (Gene));
@@ -92,7 +86,8 @@ void cross (int * g_features_a, int *  g_features_b) {
   }
 }
 
-void crossing (Gene * population) {
+
+void selection(Gene * population) {
   sort(population); // ordena por fitness
 
   int copy_length = 0.4 * POPULATION_SIZE;
@@ -102,6 +97,11 @@ void crossing (Gene * population) {
       population[i+copy_length].features[j] = population[i].features[j];
     }
   }
+}
+
+void crossing (Gene * population) {
+
+  int copy_length = 0.4 * POPULATION_SIZE;
 
   for (int i = copy_length; i < POPULATION_SIZE; ++i) {
     if (i % 2 == 0) {
@@ -155,13 +155,15 @@ Gene best_fit(Gene * population) {
 
 int main (int argc, char * argv[]) {
 
-  // if (argc != 3) {
-  //   errno = EBADF;
-  //   perror("ERRO: Deve haver três argumentos [programa arquivo_de_treinamento arquivo_de_teste]");
-  //   return EXIT_FAILURE;
-  // }
+  if (argc < 3) {
+    errno = EBADF;
+    perror("ERRO: Deve haver três argumentos [programa arquivo_de_treinamento arquivo_de_teste]");
+    return EXIT_FAILURE;
+  }
 
-  int distance = 1;
+
+  POPULATION_SIZE = 10;
+  int distance = argv[3] ? atoi(argv[3]): 1;
 
   if (training(argv[1]) < 0) return EXIT_FAILURE;
 
@@ -176,9 +178,25 @@ int main (int argc, char * argv[]) {
   free(enabled);
 
   Gene * pop = begin_population();
+
+  FILE * file;
+  if (argv[4] != NULL && atoi(argv[4]) == 1) {
+    file = fopen("./best.txt", "r");
+    double * feat = parse_line(get_line(file, 0), FEATURE_NUMBER);
+    fclose(file);
+
+    for (int i = 0; i < FEATURE_NUMBER; ++i) {
+      pop[0].features[i] = (int) feat[i];
+    }
+    free(feat);
+  }
+
+
+
   int generation = 1;
-  while (generation < 100) {
+  while (generation <= 10) {
     clock_t start = clock();
+    selection(pop);
     crossing(pop);
     mutation(pop, 0.01);
     evaluate(pop, argv[2], distance);
@@ -194,10 +212,14 @@ int main (int argc, char * argv[]) {
     if (bestGen.fitness > best) {
       printf("New best fitness - %.2lf%% - Gen %i\n", bestGen.fitness, generation);
       printf("FEATURES -> [");
+      file = fopen("./best.txt", "w");
       for (int i = 0; i < FEATURE_NUMBER; ++i) {
+        fprintf(file, "%i ", bestGen.features[i]);
         printf("\033[0;36m%i\033[0m", bestGen.features[i]);
         if (i < FEATURE_NUMBER-1) printf(", ");
       }
+      fprintf(file, "\n%.2lf%%", bestGen.fitness);
+      fclose(file);
       printf("]\n");
       best = bestGen.fitness;
     } else {
@@ -210,16 +232,6 @@ int main (int argc, char * argv[]) {
   }
   free(pop);
 
-
-  // sort(pop);
-  //   // print_features(pop[i].features);
-  //   // printf("%lf\n", pop[i].fitness);
-  //   free(pop[i].features);
-  // }
-
-
-
-  // printf("accuracy: %lf%%\n", testing(argv[2], 1));
 
   return EXIT_SUCCESS;
 }

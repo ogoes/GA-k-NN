@@ -17,8 +17,10 @@ int main (int argc, char * argv[]) {
 
   if (training(argv[1]) < 0) return EXIT_FAILURE;
 
-  printf("accuracy: %lf%%\n", testing(argv[2], 1));
-  printf("accuracy: %lf%%\n", testing(argv[2], 1));
+  int enabled[] = {1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1};
+
+  printf("Accuracy: %.2lf%%\n", testing(argv[2], 1));
+  printf("Accuracy: %.2lf%%\n", testingGA(argv[2], 1, enabled));
 
 
   return EXIT_SUCCESS;
