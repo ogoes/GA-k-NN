@@ -3,8 +3,10 @@
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
-#include <pthread.h>
+#include <errno.h>
+#include <getopt.h>
 #include "../knn/knn.h"
+#include "../base/argparse.h"
 
 int POPULATION_SIZE = 10;
 
@@ -14,12 +16,11 @@ typedef struct {
   double fitness;
 } Gene;
 
-typedef struct {
-  int * features;
-  double * fitness;
-  const char * filename;
-  int distance;
-} Params;
+
+static int verbose_flag = 0;
+static int best_fitness = 0;
+
+
 
 
 Gene * begin_population() {
@@ -130,12 +131,6 @@ void mutation (Gene * population, double mutation_probability) {
   }
 }
 
-void * thread_f (void * args) {
-  Params * dados = (Params*) args;
-  *(dados->fitness) = testingGA(dados->filename, dados->distance, dados->features);
-  pthread_exit (NULL);
-}
-
 void evaluate (Gene * population, const char * test_filename, const int distance) {
 
   for (int i = 0; i < POPULATION_SIZE; ++i) {
@@ -161,34 +156,64 @@ int main (int argc, char * argv[]) {
     return EXIT_FAILURE;
   }
 
+  int c, k;
+  static struct option long_options[] ={
+    /* These options set a flag. */
+    {"verbose", no_argument,       &verbose_flag, 1},
+    {"best",   no_argument,       &best_fitness, 1},
+    /* These options don’t set a flag.
+        We distinguish them by their indices. */
+    {"train-file",  required_argument, 0, 'f'},
+    {"test-file",  required_argument, 0, 't'},
+    {"distance",  optional_argument, 0, 'k'},
+    {0, 0, 0, 0}
+  };
+
+
+  struct flag flags;
+
+  flags.distance = 1;
+  flags.test_filename = flags.train_filename = NULL;  
+
+  parse(argc, argv, &flags);
+
+  if (!flags.train_filename || !flags.test_filename) {
+    errno = EBADF;
+    perror("Os dois arquivos são requeridos");
+  }
+
 
   POPULATION_SIZE = 10;
-  int distance = argv[3] ? atoi(argv[3]): 1;
+  int distance = flags.distance;
 
-  if (training(argv[1]) < 0) return EXIT_FAILURE;
+  if (training(flags.train_filename) < 0) return EXIT_FAILURE;
 
-  double best = testing(argv[2], distance); 
+  double best = testing(flags.test_filename, distance); 
 
 
   int * enabled = (int *) calloc (FEATURE_NUMBER, sizeof(int));
   for (int i = 0; i < FEATURE_NUMBER; ++i) enabled[i] = 1;
 
-  printf("k: %i - Default Accuracy %.2lf%%\n", distance, best);
+  if (verbose_flag)
+    printf("k: %i - Default Accuracy %.2lf%%\n", distance, best);
 
   free(enabled);
 
   Gene * pop = begin_population();
 
   FILE * file;
-  if (argv[4] != NULL && atoi(argv[4]) == 1) {
-    file = fopen("./best.txt", "r");
-    double * feat = parse_line(get_line(file, 0), FEATURE_NUMBER);
-    fclose(file);
+  if (best_fitness) {
+    char filename[] = {'b', 'e', 's', 't', flags.distance + 48, '.', 't', 'x', 't'};
+    file = fopen(filename, "r");
+    if (file) {
+      double * feat = parse_line(get_line(file, 0), FEATURE_NUMBER);
+      fclose(file);
 
-    for (int i = 0; i < FEATURE_NUMBER; ++i) {
-      pop[0].features[i] = (int) feat[i];
+      for (int i = 0; i < FEATURE_NUMBER; ++i) {
+        pop[0].features[i] = (int) feat[i];
+      }
+      free(feat);
     }
-    free(feat);
   }
 
 
@@ -204,26 +229,35 @@ int main (int argc, char * argv[]) {
     clock_t end = clock();
     double time_spent = (double)(end - start) / CLOCKS_PER_SEC;
 
-
-    printf("\033[0;32m %.2lfs \033[0m ", time_spent);
+    if (verbose_flag)
+      printf("\033[0;32m %.2lfs \033[0m ", time_spent);
 
 
 
     if (bestGen.fitness > best) {
-      printf("New best fitness - %.2lf%% - Gen %i\n", bestGen.fitness, generation);
-      printf("FEATURES -> [");
-      file = fopen("./best.txt", "w");
-      for (int i = 0; i < FEATURE_NUMBER; ++i) {
-        fprintf(file, "%i ", bestGen.features[i]);
-        printf("\033[0;36m%i\033[0m", bestGen.features[i]);
-        if (i < FEATURE_NUMBER-1) printf(", ");
+
+      if (best_fitness) {
+        char filename[] = {'b', 'e', 's', 't', flags.distance + 48, '.', 't', 'x', 't'};
+        file = fopen(filename, "a");
+        for (int i = 0; i < FEATURE_NUMBER; ++i) {
+            fprintf(file, "%i ", bestGen.features[i]);
+        }
+        fprintf(file, "\n%.2lf%%\n", bestGen.fitness);
+        fclose(file);
       }
-      fprintf(file, "\n%.2lf%%", bestGen.fitness);
-      fclose(file);
-      printf("]\n");
+      if (verbose_flag) {
+        printf("New best fitness - %.2lf%% - Gen %i\n", bestGen.fitness, generation);
+        printf("FEATURES -> [");
+        for (int i = 0; i < FEATURE_NUMBER; ++i) {
+          printf("\033[0;36m%i\033[0m", bestGen.features[i]);
+          if (i < FEATURE_NUMBER-1) printf(", ");
+        }
+        printf("]\n");
+      }
       best = bestGen.fitness;
     } else {
-      printf("Gen %3i > Fitness %.2lf%%\n", generation, best);
+      if (verbose_flag)
+        printf("Gen %3i > Fitness %.2lf%%\n", generation, best);
     }
     ++generation;
   }
