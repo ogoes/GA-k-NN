@@ -11,6 +11,8 @@ struct flag {
   char * train_filename;
   double mutation_p;
   int distance;
+  int generations;
+  int population_size;
 };
 
 void parse (int argc, char ** argv, struct flag * flags){
@@ -26,7 +28,9 @@ void parse (int argc, char ** argv, struct flag * flags){
     {"train-file",  required_argument, 0, 'f'},
     {"test-file",  required_argument, 0, 't'},
     {"distance",  optional_argument, 0, 'k'},
-    {"porcent",  optional_argument, 0, 'p'},
+    {"percent",  optional_argument, 0, 'p'},
+    {"generation",  optional_argument, 0, 'g'},
+    {"population-size",  optional_argument, 0, 's'},
     {"h",  no_argument, 0, 'h'},
     {"v",  no_argument, 0, 'v'},
     {"b",  no_argument, 0, 'b'},
@@ -40,7 +44,7 @@ void parse (int argc, char ** argv, struct flag * flags){
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    c = getopt_long (argc, argv, "hvbp:t:f:k:",
+    c = getopt_long (argc, argv, "hvbg:p:t:f:k:s:",
                     long_options, &option_index);
 
     /* Detect the end of the options. */
@@ -56,6 +60,16 @@ void parse (int argc, char ** argv, struct flag * flags){
       case 'k':
         k = atoi(optarg);
         flags->distance = k > 0? k: 1;
+        break;
+
+      case 's':
+        k = atoi(optarg);
+        flags->population_size = k > 0? k: 10;
+        break;
+
+      case 'g':
+        k = atoi(optarg);
+        flags->generations = k > 0? k: 10;
         break;
 
       case 'p':

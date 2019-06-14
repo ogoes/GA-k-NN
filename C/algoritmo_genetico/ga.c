@@ -5,7 +5,7 @@
 #include <time.h>
 #include <errno.h>
 #include <getopt.h>
-#include "../knn/knn.h"
+#include "../k-nn/knn.h"
 #include "../base/argparse.h"
 
 int POPULATION_SIZE = 10;
@@ -35,7 +35,7 @@ Gene * begin_population() {
       usleep(15);
     }
 
-    population[i].fitness = (rand() % 1000) / 1000;
+    // population[i].fitness = (rand() % 1000) / 1000;
   }
   return population;
 }
@@ -124,6 +124,8 @@ void mutation (Gene * population, double mutation_probability) {
       for (int k = 0; k < FEATURE_NUMBER; ++k) {
         if (counter == random_chromossomo) {
           population[j].features[k] = (population[j].features[k] + 1) % 2;
+          j = POPULATION_SIZE;
+          k = FEATURE_NUMBER;
         }
         ++counter;
       }
@@ -160,27 +162,32 @@ int main (int argc, char * argv[]) {
 
   flags.distance = 1;
   flags.mutation_p = 0.01;
+  flags.population_size = 10;
+  flags.generations = 10;
   flags.test_filename = flags.train_filename = NULL;  
 
   parse(argc, argv, &flags);
 
 
-  printf("mutation %lf\nbest %i\nverbose %i\ndistance %i\n", flags.mutation_p, best_fitness, verbose_flag, flags.distance);
-  return 0;
+  // printf("mutation %lf\nbest %i\nverbose %i\ndistance %i\n", flags.mutation_p, best_fitness, verbose_flag, flags.distance);
+  // return 0;
 
 
   if (helper == 1) {
-    printf("\"Escolha\" das melhores features aplicadas no k-NN -- Uso de algoritmos genéticos \n\
+    printf("\n\t\"Escolha\" das melhores features aplicadas no k-NN -- Uso de algoritmos genéticos \n\
 para definir quais características devem ser usadas para se obter uma acurácia maior \n\n\
-\t [-h|--help]              Mostra esse manual\n\
-\t [-b|--best]              Use uma string de bits a partir de um arquivo, salve os melhores resultados no arquivo\n\
-\t [-v|--verbose]           Mostre os resultados das gerações\n\
-\t [-k|--distance] INT      Valor do K usado no k-NN\n\
-\t [-p|--porcent] INT       Porcentagem de mutação do algoritmo genético\n\
-\t -f|--train-file FILE     Arquivo com as instâncias de treinamento (obrigatório)\n\
-\t -t|--test-file FILE      Arquivo com as instâncias de teste (obrigatório)\n\
-Este trabalho foi desenvolvido por Otávio Goes e Thais Zorawski. \n\
-Para a matéria de Inteligência Artificial \n\
+\t [-h|--help]                    Mostra esse manual\n\
+\t [-b|--best]                    Use uma string de bits a partir de um arquivo, \n\
+\t                                salve os melhores resultados no arquivo\n\
+\t [-v|--verbose]                 Mostre os resultados das gerações\n\
+\t [-k|--distance] INT            Valor do K usado no k-NN\n\
+\t [-s|--population-size] INT     Tamanho da população usada no algoritmo genético\n\
+\t [-p|--percent] INT             Porcentagem de mutação do algoritmo genético\n\
+\t [-g|--generation] INT          Quantidade de gerações do algoritmo\n\
+\t -f|--train-file FILE           Arquivo com as instâncias de treinamento (obrigatório)\n\
+\t -t|--test-file FILE            Arquivo com as instâncias de teste (obrigatório)\n\
+\n Este trabalho foi desenvolvido por Otávio Goes e Thais Zorawski \
+para a matéria de Inteligência Artificial \n\
 do 5º período do Curso de Bachareado em Ciência da Computação, pela UTFPR campus Campo Mourão\n");
     return 0;
   }
@@ -191,7 +198,7 @@ do 5º período do Curso de Bachareado em Ciência da Computação, pela UTFPR c
   }
 
 
-  POPULATION_SIZE = 10;
+  POPULATION_SIZE = flags.population_size;
   int distance = flags.distance;
 
   if (training(flags.train_filename) < 0) return EXIT_FAILURE;
@@ -201,11 +208,17 @@ do 5º período do Curso de Bachareado em Ciência da Computação, pela UTFPR c
 
   int * enabled = (int *) calloc (FEATURE_NUMBER, sizeof(int));
   for (int i = 0; i < FEATURE_NUMBER; ++i) enabled[i] = 1;
-
-  if (verbose_flag)
-    printf("k: %i - Default Accuracy %.2lf%%\n", distance, best);
-
   free(enabled);
+
+  if (verbose_flag) {
+    printf("\n\tTrain set from file   -> \"%s\"\n", flags.train_filename);
+    printf("\tTest set from file    -> \"%s\"\n", flags.test_filename);
+    printf("\tK distance            -> \"%i\"\n", flags.distance);
+    printf("\tMutation probability  -> \"%i%%\"\n", (int) (flags.mutation_p*100.0));
+    printf("\tPopulation size       -> \"%i\"\n", flags.population_size);
+    printf("\tGenerations           -> \"%i\"\n", flags.generations);
+    printf("\tDefault Accuracy      -> \"%.1lf%%\"\n\n", best);
+  }
 
   Gene * pop = begin_population();
 
@@ -224,23 +237,22 @@ do 5º período do Curso de Bachareado em Ciência da Computação, pela UTFPR c
     }
   }
 
-
-
   int generation = 1;
-  while (generation <= 100) {
+  while (generation <= flags.generations) {
     clock_t start = clock();
     selection(pop);
     crossing(pop);
     mutation(pop, flags.mutation_p);
-    evaluate(pop, argv[2], distance);
+    evaluate(pop, flags.test_filename, distance);
     Gene bestGen = best_fit(pop);
     clock_t end = clock();
     double time_spent = (double)(end - start) / CLOCKS_PER_SEC;
 
     if (verbose_flag)
       printf("\033[0;32m %.2lfs \033[0m ", time_spent);
-      
+
     if (bestGen.fitness > best) {
+      best = bestGen.fitness;
 
       if (best_fitness) {
         char filename[] = {'b', 'e', 's', 't', flags.distance + 48, '.', 't', 'x', 't'};
@@ -248,7 +260,7 @@ do 5º período do Curso de Bachareado em Ciência da Computação, pela UTFPR c
         for (int i = 0; i < FEATURE_NUMBER; ++i) {
             fprintf(file, "%i ", bestGen.features[i]);
         }
-        fprintf(file, "\n%.2lf%%\n", bestGen.fitness);
+        fprintf(file, "\n%.2lf%%\n", best);
         fclose(file);
       }
       if (verbose_flag) {
@@ -260,7 +272,6 @@ do 5º período do Curso de Bachareado em Ciência da Computação, pela UTFPR c
         }
         printf("]\n");
       }
-      best = bestGen.fitness;
     } else {
       if (verbose_flag)
         printf("Gen %3i > Fitness %.2lf%%\n", generation, best);
